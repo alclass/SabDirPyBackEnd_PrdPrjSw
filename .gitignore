@@ -1,0 +1,17 @@
+.vscode/
+logs/
+venv/
+.idea/
+local_settings.py
+*~
+*.bak
+*.bin
+*.ex
+*.desktop
+.directory
+*.log
+*.pyc
+*.sqlite
+.project
+.pydevproject
+.settings
