@@ -1,13 +1,28 @@
 #!/usr/bin/env python3
 """
 models/sabdirclass.py
+  This module contains class SabDirCourse which models a Saber Direito Course.
 
-Help docstring
+Its attributes (at the moment of this writing) are:
+
+    self.coursename => the course's title
+    self.coursedate = the course's initial date
+    self.coursedirpath = the course dirpath that depends on the mount path, but useful for deriving knowledge areas
+    self.rootdir_abspath = the rootpath to the course repository, useful as above
+    self._knowledgearea_path = the knowledge areas string from main topic to subtopics
+    self.knowledgeareas = same as above but as a list
+    self.instructor_fullname = instructor's fullname
+    self._instructor = instructor's first and last name (when Jr, Neto etc happen, they are sufix)
+    self.n_lectures = number of lectures in the course (usually 5)
+
 """
 import datetime
 import os
 import argparse
 import sys
+from os.path import relpath
+
+
 # sys.path.insert('.')
 # import localuserpylib.pydates.localpydates as lpd # module where gen_last_n_monday_dates_from_today() resides
 
@@ -35,10 +50,15 @@ class SabDirCourse:
 
   def __init__(
       self, coursename: str, coursedate: datetime.date = None,
-      instructor_fullname: str = None, instructor: str = None, n_lecture: int = 5
+      instructor_fullname: str = None, instructor: str = None, n_lecture: int = 5,
+      coursedirpath: os.path = None, rootdir_abspath: os.path = None
     ):
     self.coursename = coursename
     self.coursedate = coursedate
+    self.coursedirpath = coursedirpath
+    self.rootdir_abspath = rootdir_abspath
+    self._knowledgearea_path = None
+    self.knowledgeareas = []
     self.instructor_fullname = instructor_fullname
     self._instructor = instructor
     self.n_lectures = n_lecture
@@ -53,18 +73,28 @@ class SabDirCourse:
     first_n_last = pp[0] + ' ' + pp[-1]
     return first_n_last
 
-  def create_zinfofile_if_not_exists(self, courses_folderpath):
-    text = f"{self.coursename} _i {self.instructor}\n"
-    text += f"fullname: s/inf"
-    text += f"female: s/inf"
-    text += f"{self.coursedate}"
-    filepath = os.path.join(courses_folderpath, self.zinfofilename)
-    if os.path.exists(filepath):
-      return False
-    fd = open(filepath, 'w')
-    fd.write(text)
-    fd.close()
-    return False
+  def recup_knowledgeareas_by_after_rootdir(self):
+    relativepath = self.coursedirpath[len(self.rootdir_abspath):]
+    return relativepath.split('/')
+
+  @property
+  def knowledgearea_path(self):
+    if self._knowledgearea_path is not None:
+      return self._knowledgearea_path
+    if self.knowledgeareas is None or len(self.knowledgeareas) == 0:
+      if self.rootdir_abspath is None:
+        return None
+      else:
+        self.knowledgeareas = self.recup_knowledgeareas_by_after_rootdir()
+    self._knowledgearea_path = '/'.join(self.knowledgeareas)
+    return self._knowledgearea_path
+
+  def descr(self):
+    outstr = f"{self.coursedate} | {self.coursename} | {self.instructor}"
+    outstr += f"{self.coursedirpath}"
+    outstr += f"{self.rootdir_abspath}"
+    outstr += f"{self.knowledgearea_path}"
+    return outstr
 
   def __str__(self):
     outstr = f"{self.coursedate} | {self.coursename} | {self.instructor}"

@@ -46,29 +46,16 @@ parser.add_argument("--nlist", type=int, default=50,
 args = parser.parse_args()
 
 
-class SabDirCourse:
+class InfoFileCreator:
 
   zinfofilename = "z-info.txt"
 
-  def __init__(
-      self, coursename: str, coursedate: datetime.date = None,
-      instructor_fullname: str = None, instructor: str = None, n_lectures=5
-    ):
-    self.coursename = coursename
-    self.coursedate = coursedate
-    self.instructor_fullname = instructor_fullname
-    self._instructor = instructor
-    self.n_lectures = n_lectures
+  def __init__(self, sabdircoursename):
+    pass
 
   @property
-  def instructor(self):
-    if self._instructor is not None:
-      return self._instructor
-    if self.instructor_fullname is None:
-      return 's/inf'
-    pp = self.instructor_fullname.split(' ')
-    first_n_last = pp[0] + ' ' + pp[-1]
-    return first_n_last
+  def filepath(self):
+    pass
 
   def create_zinfofile_if_not_exists(self, courses_folderpath):
     text = f"{self.coursename} _i {self.instructor}\n"
