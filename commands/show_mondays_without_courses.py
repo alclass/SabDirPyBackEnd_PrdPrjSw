@@ -16,21 +16,24 @@ Output (at this moment's version, a list with coursenames and their dates will b
 
   TO-DO: improve this script adding other forms of output (file, database, spreadsheet, etc.)
 """
-import copy
 import datetime
 import os
 import argparse
 import re
 import sys
-sys.path.insert('.')
+from models import sabdirclass
+home_dir = os.path.expanduser("~")
+bin_dir = os.path.join(home_dir, 'bin')
+sys.path.insert(0, bin_dir)
 import localuserpylib.pydates.localpydates as lpd  # module where gen_last_n_monday_dates_from_today() resides
 
 
-def list_help_n_exit():
+def list_help_n_exit(**param):
   """
 
   :return:
   """
+  print(param)
   print(__doc__)
   sys.exit(0)
 
@@ -45,10 +48,7 @@ parser.add_argument("--help", action=list_help_n_exit,
 args = parser.parse_args()
 
 
-
-
 class SabDirCourseOSWalkFinder:
-
   INFOFILENAME = 'z-info.txt'
   dateregexp = re.compile('^(\\d{4}-\\d{2}-\\d{2})')
   nlist_default = 50
@@ -110,36 +110,30 @@ class SabDirCourseOSWalkFinder:
         coursename = pp[0].strip(' ')
         instructor = pp[1].strip(' ')
         self.n_course += 1
-        sabdircourse = SabDirCourse(coursename, instructor)
+        sabdircourse = sabdirclass.SabDirCourse(coursename, instructor)
         print(self.n_course, sabdircourse)
         self.introspect_courses_folder_for_info(sabdircourse)
+    # at this point,
+
+  def sort_courses_by_date_desc(self):
+    self.courses.sort(key=lambda c: c.coursedate, reverse=True)
 
   def process(self):
     self.walk_dir_up()
+    self.sort_courses_by_date_desc()
 
   def gen_last_ncourses_by_descending_date(self, alternative_nlist: int = None):
     """
     Generates the last n (self.nlist) courses in descending date order
     :return:
     """
-    # tuplelist = []
-    # for sabdircourse in self.courses:
-    #   t = (sabdircourse.coursedate, sabdircourse)
-    #   tuplelist.append(t)
-    # ==========
-    # a copy is to avoid changing the original order of self.courses
     if alternative_nlist is None:
       nlist = self.nlist
     else:
       nlist = alternative_nlist
-    courses_copied = copy.copy(self.courses)
-    courses_copied.sort(key=lambda course: course.coursedate, reverse=True)
-    nelems = nlist if nlist <= len(courses_copied) else len(courses_copied)
+    nelems = nlist if nlist <= len(self.courses) else len(self.courses)
     for i in range(nelems):
-      # t = tuplelist.pop()
-      # sabdircourse = t[1]
-      yield courses_copied[i]
-    del courses_copied
+      yield self.courses[i]
     return
 
   def find_course_on_date(self, pdate):
@@ -149,11 +143,9 @@ class SabDirCourseOSWalkFinder:
     return None
 
   def report_missing_mondays_in_sabdircourses(self):
-    courses_copied = copy.copy(self.courses)
-    courses_copied.sort(key=lambda course: course.coursedate, reverse=True)
-    # now the last course in a list (courses_copied) is the oldest in date
-    nelems = len(courses_copied)
-    oldest_course = courses_copied[nelems-1]
+    # now the last course in the self.courses list (courses_copied) is the oldest in date
+    nelems = len(self.courses)
+    oldest_course = self.courses[nelems - 1]
     oldest_coursedate = oldest_course.coursedate
     for pdate in lpd.gen_all_mondays_inbetweenfrom(oldest_coursedate, ascending_order=False):
       sabdircourse = self.find_course_on_date(pdate)
@@ -196,7 +188,6 @@ class SabDirCourseOSWalkFinder:
     return mondaydate
 
 
-
 def get_cli_args():
   """
   Required parameters:
@@ -207,12 +198,12 @@ def get_cli_args():
 
   :return: srctree_abspath, trg_rootdir_abspath, resolution_tuple
   """
-  try:
-    if args.h or args.help:
-      print(__doc__)
-      sys.exit(0)
-  except AttributeError:
-    pass
+  # try:
+  #   if args.h or args.help:
+  #     print(__doc__)
+  #     sys.exit(0)
+  # except AttributeError:
+  #   pass
   rootdir_abspath = args.rootdir
   nlist = args.nlist
   return rootdir_abspath, nlist
@@ -228,8 +219,9 @@ def adhoc_test():
 
 
 def process():
-  rootdir_abspath, nlist = get_cli_args()
-  finder = SabDirCourseOSWalkFinder(rootdir_abspath, nlist)
+  # rootdir_abspath = args.rootdir
+  # nlist = args.nlist
+  finder = SabDirCourseOSWalkFinder(args.rootdir, args.nlist)
   finder.process()
   finder.report_missing_mondays_in_sabdircourses()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-commands/findCourseNDate.py
+commands/sabdirOSWalkerMod.py
   Use os.walk() to visit SabDir courses in a directory tree and introspect each one to find its date
 
 Usage:
@@ -27,6 +27,7 @@ sys.path.insert(0, '/home/friend/bin')
 import localuserpylib.pydates.localpydates as lpd  # module where gen_last_n_monday_dates_from_today() resides
 SabDirCourse = sdmodclass.SabDirCourse
 
+
 def list_help_n_exit():
   """
 
@@ -46,49 +47,7 @@ parser.add_argument("--nlist", type=int, default=50,
 args = parser.parse_args()
 
 
-class SabDirCourse:
-
-  zinfofilename = "z-info.txt"
-
-  def __init__(
-      self, coursename: str, coursedate: datetime.date = None,
-      instructor_fullname: str = None, instructor: str = None, n_lectures=5
-    ):
-    self.coursename = coursename
-    self.coursedate = coursedate
-    self.instructor_fullname = instructor_fullname
-    self._instructor = instructor
-    self.n_lectures = n_lectures
-
-  @property
-  def instructor(self):
-    if self._instructor is not None:
-      return self._instructor
-    if self.instructor_fullname is None:
-      return 's/inf'
-    pp = self.instructor_fullname.split(' ')
-    first_n_last = pp[0] + ' ' + pp[-1]
-    return first_n_last
-
-  def create_zinfofile_if_not_exists(self, courses_folderpath):
-    text = f"{self.coursename} _i {self.instructor}\n"
-    text += f"fullname: s/inf"
-    text += f"female: s/inf"
-    text += f"{self.coursedate}"
-    filepath = os.path.join(courses_folderpath, self.zinfofilename)
-    if os.path.exists(filepath):
-      return False
-    fd = open(filepath, 'w')
-    fd.write(text)
-    fd.close()
-    return False
-
-  def __str__(self):
-    outstr = f"{self.coursedate} | {self.coursename} | {self.instructor}"
-    return outstr
-
-
-class SabDirCourseOSWalkFinder:
+class SabDirCourseOSWalkGrabber:
 
   INFOFILENAME = 'z-info.txt'
   dateregexp = re.compile('^(\\d{4}-\\d{2}-\\d{2})')
@@ -101,6 +60,8 @@ class SabDirCourseOSWalkFinder:
         f" Please, retry or access the help docstring via parameters -h or --help"
       )
       raise OSError(errmsg)
+    # this boolean is to be set to True after the os.walk() finishes
+    self.courses_has_been_sorted_date_desc = False
     self.rootdir_abspath = rootdir_abspath
     self.currentdir_abspath = None
     self.courses = []
@@ -109,6 +70,13 @@ class SabDirCourseOSWalkFinder:
     if nlist is None:
       nlist = self.nlist_default
     self.nlist = nlist
+    self.process()
+
+  @property
+  def first_course_in_date(self):
+    if self.courses_has_been_sorted_date_desc:
+      return self.courses[-1]
+    return None
 
   def find_courses_date(self, sabdircourse):
     self.course_infofile_found += 1
@@ -154,6 +122,8 @@ class SabDirCourseOSWalkFinder:
         sabdircourse = SabDirCourse(coursename, instructor)
         print(self.n_course, sabdircourse)
         self.introspect_courses_folder_for_info(sabdircourse)
+    self.courses.sort(key=lambda c: c.coursedate, reverse=True)
+    self.courses_has_been_sorted_date_desc = True
 
   def process(self):
     self.walk_dir_up()
@@ -189,7 +159,6 @@ class SabDirCourseOSWalkFinder:
       return resultlist[0]
     return None
 
-
   def find_courses_date_by_first_lecture_filedate(self):
     """
 
@@ -220,7 +189,6 @@ class SabDirCourseOSWalkFinder:
     files_cdatetime = datetime.datetime.fromtimestamp(files_ctime)
     mondaydate = lpd.get_nearest_monday_from(files_cdatetime)
     return mondaydate
-
 
 
 def get_cli_args():
@@ -255,12 +223,10 @@ def adhoc_test():
 
 def process():
   rootdir_abspath, nlist = get_cli_args()
-  finder = SabDirCourseOSWalkFinder(rootdir_abspath, nlist)
-  finder.process()
-  for i, t in enumerate(finder.gen_last_ncourses_by_descending_date()):
+  grabber = SabDirCourseOSWalkGrabber(rootdir_abspath, nlist)
+  for i, t in enumerate(grabber.gen_last_ncourses_by_descending_date()):
     seq = i + 1
     print(seq, t)
-  finder.report_missing_mondays_in_sabdircourses()
 
 
 if __name__ == '__main__':

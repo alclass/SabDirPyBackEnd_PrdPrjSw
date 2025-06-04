@@ -1,19 +1,37 @@
 #!/usr/bin/env python3
 """
+commands/reportMissingMondays.py
+
+Help docstring
 
 """
 import copy
+import os
+import sys
+import argparse
+from models import sabdirclass
+from commands import sabdirOSWalkerMod as walkermod
+home_dir = os.path.expanduser("~")
+bin_dir = os.path.join(home_dir, 'bin')
+sys.path.insert(0, bin_dir)
+import localuserpylib.pydates.localpydates as lpd  # module where gen_last_n_monday_dates_from_today() resides
 
 
-def report_missing_mondays_in_sabdircourses(self):
-  courses_copied = copy.copy(self.courses)
-  courses_copied.sort(key=lambda course: course.coursedate, reverse=True)
-  # now the last course in a list (courses_copied) is the oldest in date
-  nelems = len(courses_copied)
-  oldest_course = courses_copied[nelems-1]
-  oldest_coursedate = oldest_course.coursedate
-  for pdate in lpd.gen_all_mondays_inbetweenfrom(oldest_coursedate, ascending_order=False):
-    sabdircourse = self.find_course_on_date(pdate)
+parser = argparse.ArgumentParser(description="Walk a dirtree to find SabDir course dates.")
+parser.add_argument("--rootdir", type=str, default=None,
+                    help="Directory from which to walk up directory to find SabDir course dates")
+parser.add_argument("--nlist", type=int, default=50,
+                    help="number of courses to list in descending alphabetical order")
+# parser.add_argument("--help", action=list_help_n_exit,
+#                     help="print help and exist")
+args = parser.parse_args()
+
+
+def report_missing_mondays_in_sabdircourses(rootdir_abspath):
+  grabber = walkermod.SabDirCourseOSWalkGrabber(rootdir_abspath=rootdir_abspath)
+  first_course_in_date = grabber.first_course_in_date
+  for pdate in lpd.gen_all_mondays_inbetweenfrom(first_course_in_date, ascending_order=False):
+    sabdircourse = grabber.find_course_on_date(pdate)
     if sabdircourse:
       scrmsg = f"The is a course on {pdate} | {sabdircourse}"
       print(scrmsg)
@@ -28,15 +46,18 @@ def adhoc_test():
     --rootdir="/home/dados/VideoAudio/Soc vi/Law vi/BRA Dir vi/Sab Dir vi/completed Sab Dir ytvi"
   """
   for i, sdate in enumerate(lpd.gen_last_n_monday_dates_from_today()):
-    print(i, sdate)
+    seq = i + 1
+    print(seq, sdate)
 
 
 def process():
+  rootdir_abspath = args.rootdir
+  report_missing_mondays_in_sabdircourses(rootdir_abspath)
   pass
 
 
 if __name__ == '__main__':
   """
-  adhoc_test()
   """
   process()
+  adhoc_test()
